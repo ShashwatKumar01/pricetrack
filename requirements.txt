@@ -19,3 +19,4 @@ python-amazon-paapi
 unshortenit
 beautifulsoup4==4.12.3
 requests==2.31.0
+python_flipkart_scraper

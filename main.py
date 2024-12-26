@@ -1,7 +1,6 @@
 import asyncio
+import logging
 import threading
-
-from aiohttp import web
 from pyrogram import Client
 from pyrogram import filters
 from pyrogram.types import Message
@@ -10,7 +9,7 @@ import os
 import schedule
 import time
 import pytz
-import re
+from quart import Quart
 
 from scraper import scrape,check_platform
 from scheduler import check_prices
@@ -20,12 +19,17 @@ from helpers import fetch_all_products, add_new_product, fetch_one_product, dele
 # load_dotenv()
 
 timezone = pytz.timezone("Asia/Kolkata")
-
-
 bot_token = os.getenv("BOT_TOKEN")
 api_id = os.getenv("API_ID")
 api_hash = os.getenv("API_HASH")
+bot = Quart(__name__)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
+
+@bot.route('/')
+async def hello():
+    return 'Hello, world!'
 app = Client("PriceTrackerBot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
 
@@ -209,20 +213,12 @@ def run_schedule(loop):
         schedule.run_pending()
         time.sleep(1)
     # Main async function
-async def handle(request):
-    return web.Response(text='hello,world')
+
 async def main():
     # Start the schedule runner in a separate thread
-    bot = web.Application()
-    bot.router.add_get('/', handle)
+
 
     # Bind the application to a specific port
-    runner = web.AppRunner(bot)
-    await runner.setup()
-    site = web.TCPSite(runner, 'localhost', 8080)  # Change 'localhost' and '8080' to your desired host and port
-    await site.start()
-
-    print("Server started at http://localhost:8080")
     schedule_thread = threading.Thread(target=run_schedule,args=(loop,))
     schedule_thread.daemon = True  # Ensure the thread stops when the program exits
     schedule_thread.start()
@@ -239,5 +235,6 @@ async def main():
 if __name__ == "__main__":
     # Use asyncio.run to start the main async function and manage the event loop
     loop = asyncio.get_event_loop()
+    loop.create_task(bot.run_task(host='0.0.0.0', port=8000))
     loop.create_task(main())
     loop.run_forever()

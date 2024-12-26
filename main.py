@@ -217,7 +217,6 @@ async def main():
     bot.router.add_get('/', handle)
 
     # Bind the application to a specific port
-
     runner = web.AppRunner(bot)
     await runner.setup()
     site = web.TCPSite(runner, 'localhost', 8080)  # Change 'localhost' and '8080' to your desired host and port

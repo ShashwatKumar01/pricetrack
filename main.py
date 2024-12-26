@@ -1,5 +1,7 @@
 import asyncio
 import threading
+
+from aiohttp import web
 from pyrogram import Client
 from pyrogram import filters
 from pyrogram.types import Message
@@ -207,14 +209,24 @@ def run_schedule(loop):
         schedule.run_pending()
         time.sleep(1)
     # Main async function
+async def handle(request):
+    return web.response(text='hello,world')
 async def main():
     # Start the schedule runner in a separate thread
+    bot = web.Application()
+    bot.router.add_get('/', handle)
+
+    # Bind the application to a specific port
+    runner = web.AppRunner(bot)
+    await runner.setup()
+    site = web.TCPSite(runner, 'localhost', 8080)  # Change 'localhost' and '8080' to your desired host and port
+    await site.start()
+
+    print("Server started at http://localhost:8080")
     schedule_thread = threading.Thread(target=run_schedule,args=(loop,))
     schedule_thread.daemon = True  # Ensure the thread stops when the program exits
     schedule_thread.start()
 
-    # Schedule the price checking every minute using asyncio.create_task()
-    # schedule.every(2).hours.do(lambda: asyncio.ensure_future(check_prices(app))).tag("hourly_job")
     schedule.every(15).minutes.do(lambda: asyncio.ensure_future(check_prices(app))).tag("minute_job")
 
     # Run the app (Pyrogram client)

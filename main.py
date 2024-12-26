@@ -210,7 +210,7 @@ def run_schedule(loop):
         time.sleep(1)
     # Main async function
 async def handle(request):
-    return web.response(text='hello,world')
+    return web.Response(text='hello,world')
 async def main():
     # Start the schedule runner in a separate thread
     bot = web.Application()

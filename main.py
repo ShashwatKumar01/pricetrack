@@ -171,7 +171,6 @@ async def track_url(_, message):
         url= extract_link_from_text(text).strip()
         if(('amazon' not in url) and ('ajio' not in url) and ('myntra' not in url) and ('flipkart'not in url)):
             url= unshorten_url(url)
-
         platform=await check_platform(url)
         if platform==None:
             await a.edit('Unsupported platform, Only amazon,flipkart,myntra ,ajio')

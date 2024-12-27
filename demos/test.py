@@ -28,22 +28,19 @@ def unshorten_url(short_url):
 #
 #     print(x)
 # asyncio.run(main())
-
-from python_flipkart_scraper import ExtractFlipkart
-async def fetch_flipkart_price2(url):
+def fetch_myntra_price2(url):
     try:
-        product=ExtractFlipkart(url)
-        print(product)
-        return ({
-                        "name": product.get_title(),
-                        "price": product.get_price(),
-                        "product_image": product.get_images()[0]
-                    })
+        response = requests.get(url,headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            print(soup)
+            ptitle=soup.find_all('div',class_='pdp-price-info')
+            pname = soup.find_all('h1', class_='pdp-name')
+            price = soup.find_all('h1', class_='pdp-price')
+            print (ptitle,pname,price)
     except Exception as e:
-        print(f"Error fetching flipkart price: {e}")
-        return {"error": f"An error occurred: {str(e)}"}
-async def main():
-    x = input('enter url: ')
-    y=await fetch_flipkart_price2(x)
-    print(y)
-asyncio.run(main())
+        print(e)
+url='https://www.myntra.com/casual-shoes/highlander/highlander-men-lace-up-sneakers/21232226/buy'
+fetch_myntra_price2(url)
+list1={}
+print(list1.get('gg'))

@@ -83,10 +83,10 @@ async def track(_, message):
                 products_message += (
                     f"🏷️ **Product {i}**: <b>[{product_name}]({product_url})</b>\n\n"
                 )
-                products_message += f"💰 **Current Price**: {product_price}\n\n"
-                products_message += f"🔗 **Product LINK** : {product_url}\n\n"
-                products_message += f"🕵️ Use `/product {_id}` for more details\n\n"
-                products_message += f"❌ Use `/stop {_id}` to Stop tracking\n\n\n\n"
+                products_message += f"💰 **Current Price**: {product_price}\n"
+                products_message += f"🔗 **Product LINK** : {product_url}\n"
+                products_message += f"🕵️ Use `/product {_id}` for more details\n"
+                products_message += f"❌ Use `/stop {_id}` to Stop tracking\n\n\n"
 
             await text.edit(products_message, disable_web_page_preview=True)
         else:
@@ -167,27 +167,39 @@ async def track_url(_, message):
         text = message.caption if message.caption else message.text
         url= extract_link_from_text(text).strip()
         if(('amazon' not in url) and ('ajio' not in url) and ('myntra' not in url) and ('flipkart'not in url)):
-            print('jj')
-            url= await unshorten_url(url)
-        await a.delete()
-        print(url)
+
+            url= unshorten_url(url)
+
+        # print(url)
         # platform = "amazon" if any(re.match(pattern, url) for pattern in amazon_url_patterns) else "flipkart"
         platform=await check_platform(url)
+        if platform==None:
+            await a.edit('Unsupported platform, Only amazon,flipkart,myntra ,ajio')
+            return
+        try:
+            product_name, price,scrap_error= await scrape(url, platform)
+            print(product_name, price,scrap_error)
+            if product_name and price:
+                status = await message.reply_text("Adding Your Product...")
+                id = await add_new_product(
+                    message.chat.id, product_name, url, price
+                )
+                await status.edit(
+                    f'Tracking your product "{product_name}"!\n\n'
+                    f"You can use\n <b>`/product {id}`</b> to get more information about it."
+                )
+                await a.delete()
+            if scrap_error:
+                await app.send_message(chat_id='5886397642', text=f'New Error from a user\n\n{scrap_error},\n\n{url}',disable_web_page_preview=True)
+                await app.send_message(chat_id=message.chat.id,text="Failed to scrape your product !!!")
+                await a.delete()
 
-        product_name, price = await scrape(url, platform)
-        status = await message.reply_text("Adding Your Product...")
-        if product_name and price:
-            id = await add_new_product(
-                message.chat.id, product_name, url, price
-            )
-            await status.edit(
-                f'Tracking your product "{product_name}"!\n\n'
-                f"You can use\n <b>`/product {id}`</b> to get more information about it."
-            )
-        else:
-            await status.edit("Failed to scrape !!!")
+
+        except Exception as e:
+            await app.send_message(chat_id='5886397642',text=e)
     except Exception as e:
-        print(e)
+        await app.send_message(chat_id='5886397642', text=e)
+
 # schedule.every().day.at("00:00").do(lambda: asyncio.create_task(check_prices(app))).tag(
 #     "daily_job"
 # )

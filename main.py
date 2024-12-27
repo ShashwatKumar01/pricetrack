@@ -163,26 +163,26 @@ async def status(_, message):
 @app.on_message(filters.private | filters.group)
 async def track_url(_, message):
     try:
-        a = await message.reply_text("Please Wait....!!")
         text = message.caption if message.caption else message.text
+        if 'Livegram'in text or 'You cannot forward someone' in text:
+            await message.delete()
+            return None
+        a = await message.reply_text("Please Wait....!!")
         url= extract_link_from_text(text).strip()
         if(('amazon' not in url) and ('ajio' not in url) and ('myntra' not in url) and ('flipkart'not in url)):
-
             url= unshorten_url(url)
 
-        # print(url)
-        # platform = "amazon" if any(re.match(pattern, url) for pattern in amazon_url_patterns) else "flipkart"
         platform=await check_platform(url)
         if platform==None:
             await a.edit('Unsupported platform, Only amazon,flipkart,myntra ,ajio')
             return
         try:
-            product_name, price,scrap_error= await scrape(url, platform)
+            platform,pid,product_name, price,img_url,scrap_error= await scrape(url, platform)
             print(product_name, price,scrap_error)
             if product_name and price:
                 status = await message.reply_text("Adding Your Product...")
                 id = await add_new_product(
-                    message.chat.id, product_name, url, price
+                    message.chat.id, product_name, url, price,img_url,pid,platform
                 )
                 await status.edit(
                     f'Tracking your product "{product_name}"!\n\n'
@@ -235,7 +235,7 @@ async def main():
     schedule_thread.daemon = True  # Ensure the thread stops when the program exits
     schedule_thread.start()
 
-    schedule.every(15).minutes.do(lambda: asyncio.ensure_future(check_prices(app))).tag("minute_job")
+    schedule.every(20).minutes.do(lambda: asyncio.ensure_future(check_prices(app))).tag("minute_job")
 
     # Run the app (Pyrogram client)
     await app.start()

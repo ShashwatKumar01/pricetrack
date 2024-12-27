@@ -1,5 +1,7 @@
 import asyncio
 import json
+import re
+import time
 import urllib
 
 from unshortenit import UnshortenIt
@@ -17,30 +19,34 @@ def unshorten_url(short_url):
         shorturi=urllib.parse.unquote(original_link)
     # print(shorturi)
     return shorturi
-# async def main():
-#     y=input('Enter URL: ')
-#     # x=await fetch_flipkart_price(y)
-#     # x=await fetch_myntra_price('https://myntr.in/r8Xu0a')
-#     unshorturl= unshorten_url(y)
-#     print(unshorturl)
-#     platform=await check_platform(unshorturl)
-#     x=await scrape(unshorturl,platform)
-#
-#     print(x)
-# asyncio.run(main())
-def fetch_myntra_price2(url):
-    try:
-        response = requests.get(url,headers=headers)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, "html.parser")
-            print(soup)
-            ptitle=soup.find_all('div',class_='pdp-price-info')
-            pname = soup.find_all('h1', class_='pdp-name')
-            price = soup.find_all('h1', class_='pdp-price')
-            print (ptitle,pname,price)
-    except Exception as e:
-        print(e)
-url='https://www.myntra.com/casual-shoes/highlander/highlander-men-lace-up-sneakers/21232226/buy'
-fetch_myntra_price2(url)
-list1={}
-print(list1.get('gg'))
+
+def findid(url):
+    url=unshorten_url(url)
+    flipkart_pattern = r"flipkart\.com(?:\/.*\/.*)?\?pid=([\w-]+)"
+    ajio_pattern = r"https:\/\/www\.ajio\.com(?:.*\/)?p\/([\w-]+)(?=\W|$)"
+    myntra_pattern = r"https:\/\/www\.myntra\.com(?:\/.*)?\/(\d+)\/?"
+
+    # flipkart_match = re.match(flipkart_pattern, url)
+    # ajio_match = re.match(ajio_pattern, url)
+    # myntra_match = re.match(myntra_pattern, url)
+    if 'flipkart' in url:
+        flipkart_match = re.search(flipkart_pattern, url)
+        if flipkart_match:
+            return {"platform": "flipkart", "product_id": flipkart_match.group(1)}
+
+    elif 'ajio' in url:
+        ajio_match = re.search(ajio_pattern, url)
+        if ajio_match:
+            return {"platform": "ajio", "product_id": ajio_match.group(1)}
+    elif 'myntra' in url:
+        myntra_match = re.search(myntra_pattern, url)
+        if myntra_match:
+            return {"platform": "myntra", "product_id": myntra_match.group(1)}
+    elif 'amazon' in url:
+        product_code_match = re.search(r"/product/([A-Za-z0-9]{10})", url)
+        product_code_match2 = re.search(r'/dp/([A-Za-z0-9]{10})', url)
+        product_code = product_code_match.group(1) if product_code_match else product_code_match2.group(1)
+        return {"platform": "myntra", "product_id": product_code}
+for i in range(1):
+    x=input('enter: ')
+    print(findid(x))

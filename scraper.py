@@ -1,5 +1,7 @@
 
 import os
+import re
+
 import requests
 import json
 
@@ -48,13 +50,15 @@ headers = {
 async def scrape(url, platform):
     # print(url,platform)
     # try:
+    pid=findId(url)
+    if pid==None:
+        return None,None,None,None,None,'Product ID not Found'
     if platform == "flipkart":
         product = await fetch_flipkart_price2(url)
     # elif platform == "amazon":
     #     product = ExtractAmazon(url)
     elif platform=='amazon':
         product = await fetch_amazon_price(url)
-        print(product)
     elif platform=='ajio':
         product = await fetch_ajio_price(url)
     elif platform=='myntra':
@@ -66,8 +70,9 @@ async def scrape(url, platform):
 
     price = product.get('price')
     product_name = product.get('name')
+    img_url=product.get('product_image')
     scrap_error=product.get('error')
-    return product_name, price,scrap_error
+    return platform,pid,product_name, price,img_url,scrap_error
     # except Exception as e:
     #     print(e)
     #     return None, None
@@ -84,6 +89,34 @@ async def check_platform(url):
         if keyword in url:
             return platform
     return None
+
+def findId(url):
+    flipkart_pattern = r"flipkart\.com(?:\/.*\/.*)?\?pid=([\w-]+)"
+    ajio_pattern = r"https:\/\/www\.ajio\.com(?:.*\/)?p\/([\w-]+)(?=\W|$)"
+    myntra_pattern = r"https:\/\/www\.myntra\.com(?:\/.*)?\/(\d+)\/?"
+
+    # flipkart_match = re.match(flipkart_pattern, url)
+    # ajio_match = re.match(ajio_pattern, url)
+    # myntra_match = re.match(myntra_pattern, url)
+    if 'flipkart' in url:
+        flipkart_match = re.search(flipkart_pattern, url)
+        if flipkart_match:
+            return flipkart_match.group(1)
+
+    elif 'ajio' in url:
+        ajio_match = re.search(ajio_pattern, url)
+        if ajio_match:
+            return ajio_match.group(1)
+    elif 'myntra' in url:
+        myntra_match = re.search(myntra_pattern, url)
+        if myntra_match:
+            return myntra_match.group(1)
+    elif 'amazon' in url:
+        product_code_match = re.search(r"/product/([A-Za-z0-9]{10})", url)
+        product_code_match2 = re.search(r'/dp/([A-Za-z0-9]{10})', url)
+        product_code = product_code_match.group(1) if product_code_match else product_code_match2.group(1)
+        return product_code
+
 async def fetch_flipkart_price2(url):
     try:
         product=ExtractFlipkart(url)
@@ -168,7 +201,7 @@ async def fetch_amazon_price(product_url):
 
         else:
             price = 'Currently Unavailable'
-        return {"price": price, "name": amazon_product_name, "image_url": img_url}
+        return {"price": price, "name": amazon_product_name, "product_image": img_url}
     except Exception as e:
         print(f"Error fetching amazon price: {e}")
         return {"error": f"An error occurred: {str(e)}"}

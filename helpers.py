@@ -50,20 +50,23 @@ async def fetchstats():
     return usernos,pnos
 
 
-async def add_new_product(user_id, product_name, product_url, initial_price):
+async def add_new_product(user_id, product_name, product_url, initial_price,img_url,pid,platform):
     try:
-        existing_global_product = PRODUCTS.find_one({"product_name": product_name})
+        existing_global_product = PRODUCTS.find_one({"pid": pid})
         if not existing_global_product:
             aff_url = await ekconvert(product_url)
 
             global_new_product = {
                 "product_name": product_name,
+                "platform":platform,
+                "pid":pid,
                 "url": product_url,
                 "price": initial_price,
                 "previous_price": initial_price,
                 "upper": initial_price,
                 "lower": initial_price,
-                "aff_url": aff_url
+                "aff_url": aff_url,
+                "img_url":img_url
             }
             insert_result = PRODUCTS.insert_one(global_new_product)
             existing_global_product = {"_id": insert_result.inserted_id}

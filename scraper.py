@@ -217,8 +217,6 @@ async def fetch_myntra_price(url):
         response = requests.get(url,headers=headers)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, "html.parser")
-
-            # Find all <script> tags with type="application/ld+json"
             scripts = soup.find_all("script", type="application/ld+json")
 
             if scripts:

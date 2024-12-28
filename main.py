@@ -234,7 +234,7 @@ async def main():
     schedule_thread.daemon = True  # Ensure the thread stops when the program exits
     schedule_thread.start()
 
-    schedule.every(1).minutes.do(lambda: asyncio.ensure_future(check_prices(app))).tag("minute_job")
+    schedule.every(30).minutes.do(lambda: asyncio.ensure_future(check_prices(app))).tag("minute_job")
 
     # Run the app (Pyrogram client)
     await app.start()

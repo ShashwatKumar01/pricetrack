@@ -1,6 +1,7 @@
 import time
 
 from dotenv import load_dotenv
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 load_dotenv()
 
@@ -79,11 +80,14 @@ async def notify_users(product, app):
             f"   - Percentage Change: {percentage_change:.2f}%\n"
             f"   - Tracked By <b>@The_PriceTracker_Bot</b>\n\n"
             f"   - <b>[Click here to open in {platform}]({product['aff_url']})</b>\n\n"
-            f"     {product['aff_url']}"
+            f"🔴 Send `/stop {user['_id']}` to Stop the Tracking"
         )
+        Join = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("Buy Now", url=f"{product['aff_url']}")],
+             [InlineKeyboardButton("Today's Deals", url="https://t.me/+HeHY-qoy3vsxYWU1")]])
 
         await app.send_message(
-            chat_id=user.get("user_id"), text=text, disable_web_page_preview=False)
+            chat_id=user.get("user_id"), text=text,reply_markup=Join, disable_web_page_preview=False)
 
 
 # Compare prices to identify changed products

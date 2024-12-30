@@ -11,23 +11,7 @@ from python_flipkart_scraper import ExtractFlipkart
 # from python_amazon_scraper import ExtractAmazon
 
 from dotenv import load_dotenv
-# async def scrape(url, platform):
-#     # print(url,platform)
-#     try:
-#         if platform == "flipkart":
-#             product = ExtractFlipkart(url)
-#         elif platform == "amazon":
-#             product = ExtractAmazon(url)
-#         else:
-#             raise ValueError("Unsupported platform")
-#
-#         price = product.get_price()
-#         product_name = product.get_title()
-#         print(price,product_name)
-#         return product_name, price
-#     except Exception as e:
-#         print(e)
-#         return None, None
+
 load_dotenv()
 KEY = os.getenv("KEY")
 SECRET= os.getenv("SECRET")  # User-product mapping
@@ -63,6 +47,10 @@ async def scrape(url, platform):
         product = await fetch_ajio_price(url)
     elif platform=='myntra':
         product = await fetch_myntra_price(url)
+    elif platform=='shopsy':
+        product = await fetch_shopsy_price(url)
+    elif platform=='meesho':
+        product = await fetch_meesho_price(url)
     else:
         # scrap_error='Unsupported platform'
         raise ValueError("Unsupported platform")
@@ -84,6 +72,8 @@ async def check_platform(url):
         "ajio": "ajio",
         "myntra": "myntra",
         "flipkart": "flipkart",
+        "shopsy":"shopsy",
+        "meesho":"meesho"
     }
     for keyword, platform in platform_map.items():
         if keyword in url:
@@ -94,6 +84,8 @@ def findId(url):
     flipkart_pattern = r"flipkart\.com(?:\/.*\/.*)?\?pid=([\w-]+)"
     ajio_pattern = r"https:\/\/www\.ajio\.com(?:.*\/)?p\/([\w-]+)(?=\W|$)"
     myntra_pattern = r"https:\/\/www\.myntra\.com(?:\/.*)?\/(\d+)\/?"
+    shopsy_pattern = r"pid=([^&]+)"
+    meesho_pattern = r"\/p\/([a-zA-Z0-9]+)"
 
     # flipkart_match = re.match(flipkart_pattern, url)
     # ajio_match = re.match(ajio_pattern, url)
@@ -111,6 +103,14 @@ def findId(url):
         myntra_match = re.search(myntra_pattern, url)
         if myntra_match:
             return myntra_match.group(1)
+    elif 'shopsy' in url:
+        shopsy_match = re.search(shopsy_pattern, url)
+        if shopsy_match:
+            return shopsy_match.group(1)
+    elif 'meesho' in url:
+        meesho_match = re.search(meesho_pattern, url)
+        if meesho_match:
+            return meesho_match.group(1)
     elif 'amazon' in url:
         product_code_match = re.search(r"/product/([A-Za-z0-9]{10})", url)
         product_code_match2 = re.search(r'/dp/([A-Za-z0-9]{10})', url)
@@ -376,4 +376,110 @@ async def fetch_myntra_price2(url):
         print(f"Error fetching Myntra price: {e}")
         return {"error": f"An error occurred: {str(e)}"}
 
+async def fetch_shopsy_price(url):
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
+        response = requests.get(url,headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            scripts = soup.find_all("script", type="application/ld+json")
 
+            if scripts:
+                try:
+                    raw_json = scripts[0].string.strip()
+
+                    clean_json = ''.join([char if char.isprintable() else ' ' for char in raw_json])
+
+                    data = json.loads(clean_json)
+                    data=data[0]
+                    product_name = data.get("name")
+                    product_price = data.get("offers", {}).get("price")
+                    price_currency = data.get("offers", {}).get("priceCurrency")
+                    product_image = data.get("image")
+                    product_description = data.get("description")
+
+                    # Print or return the product details
+                    if product_name == None:
+                        return {'error':'Unable to find the product'}
+                    return ({
+                        "name": product_name,
+                        "price": f"{product_price}",
+                        "product_image": product_image,
+                        "product_description": product_description
+                    })
+                    # else:
+                    #     print("No product data found.")
+
+                except json.JSONDecodeError as e:
+                    print(f"Error decoding JSON: {e}")
+                except Exception as e:
+                    print(f"Unexpected error: {e}")
+            else:
+                print("No JSON-LD script found")
+                return {"error": f"An error occurred: No JSON-LD script found"}
+        else:
+            print(f"Failed to fetch page, status code: {response.status_code}")
+            return {"error": f"Unable to fetch status code: {response.status_code}"}
+    except Exception as e:
+        print(f"Error fetching Shopsy price: {e}")
+        return {"error": f"An error occurred: {str(e)}"}
+async def fetch_meesho_price(url):
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
+            "Accept-Language": "en-US,en;q=0.9"
+        }
+        response = requests.get(url,headers=headers)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            # print(soup)
+            # print(response.text)
+            # Find all <script> tags with type="application/ld+json"
+            scripts = soup.find_all("script", type="application/ld+json")
+            # print(scripts)
+            if scripts:
+                try:
+                    raw_json = scripts[1].string.strip()
+
+                    clean_json = ''.join([char if char.isprintable() else ' ' for char in raw_json])
+
+                    data = json.loads(clean_json)
+                    print(data)
+                    # data=data[0]
+                    print(data)
+                    # Ensure the data is a valid product object
+                    # if data.get("@type") == "Product":  # Filter for Product data
+                    product_name = data.get("name")
+                    product_price = data.get("offers", {}).get("price")
+                    price_currency = data.get("offers", {}).get("priceCurrency")
+                    product_image = data.get("image")[0]
+                    product_description = data.get("description")
+
+                    # Print or return the product details
+                    if product_name == None:
+                        return {'error':'Unable to find the product'}
+                    return ({
+                        "name": product_name,
+                        "price": f"{product_price}",
+                        "product_image": product_image,
+                        "product_description": product_description
+                    })
+                    # else:
+                    #     print("No product data found.")
+
+                except json.JSONDecodeError as e:
+                    print(f"Error decoding JSON: {e}")
+                except Exception as e:
+                    print(f"Unexpected error: {e}")
+            else:
+                print("No JSON-LD script found")
+                return {"error": f"An error occurred: No JSON-LD script found"}
+        else:
+            print(f"Failed to fetch page, status code: {response.status_code}")
+            return {"error": f"Unable to fetch status code: {response.status_code}"}
+    except Exception as e:
+        print(f"Error fetching Meesho price: {e}")
+        return {"error": f"An error occurred: {str(e)}"}

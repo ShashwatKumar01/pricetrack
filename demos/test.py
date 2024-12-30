@@ -44,37 +44,36 @@ def fetch_myntra_price(url):
             "price": product_price,
             "image": product_image,
         }
-async def fetch_myntra_price2(url):
+async def fetch_meesho_price(url):
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36",
-            "Accept-Language": "en-US,en;q=0.9",
-            "Referer": "https://www.myntra.com/"
+            "Accept-Language": "en-US,en;q=0.9"
         }
         response = requests.get(url,headers=headers)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, "html.parser")
-            print(response.text)
+            # print(soup)
+            # print(response.text)
             # Find all <script> tags with type="application/ld+json"
             scripts = soup.find_all("script", type="application/ld+json")
-
+            # print(scripts)
             if scripts:
                 try:
-                    # Extract the JSON data from the second script tag (scripts[1])
                     raw_json = scripts[1].string.strip()
 
-                    # Clean up the JSON string to remove any control characters
                     clean_json = ''.join([char if char.isprintable() else ' ' for char in raw_json])
 
-                    # Now try to load the cleaned JSON
                     data = json.loads(clean_json)
-
+                    print(data)
+                    # data=data[0]
+                    print(data)
                     # Ensure the data is a valid product object
                     # if data.get("@type") == "Product":  # Filter for Product data
                     product_name = data.get("name")
                     product_price = data.get("offers", {}).get("price")
                     price_currency = data.get("offers", {}).get("priceCurrency")
-                    product_image = data.get("image")
+                    product_image = data.get("image")[0]
                     product_description = data.get("description")
 
                     # Print or return the product details
@@ -100,12 +99,14 @@ async def fetch_myntra_price2(url):
             print(f"Failed to fetch page, status code: {response.status_code}")
             return {"error": f"Unable to fetch status code: {response.status_code}"}
     except Exception as e:
-        print(f"Error fetching Myntra price: {e}")
+        print(f"Error fetching Meesho price: {e}")
         return {"error": f"An error occurred: {str(e)}"}
 def findId(url):
     flipkart_pattern = r"flipkart\.com(?:\/.*\/.*)?\?pid=([\w-]+)"
+    shopsy_pattern = r"pid=([^&]+)"
     ajio_pattern = r"https:\/\/www\.ajio\.com(?:.*\/)?p\/([\w-]+)(?=\W|$)"
     myntra_pattern = r"https:\/\/www\.myntra\.com(?:\/.*)?\/(\d+)\/?"
+    meesho_pattern=r"\/p\/([a-zA-Z0-9]+)"
 
     # flipkart_match = re.match(flipkart_pattern, url)
     # ajio_match = re.match(ajio_pattern, url)
@@ -123,6 +124,14 @@ def findId(url):
         myntra_match = re.search(myntra_pattern, url)
         if myntra_match:
             return myntra_match.group(1)
+    elif 'shopsy' in url:
+        shopsy_match = re.search(shopsy_pattern, url)
+        if shopsy_match:
+            return shopsy_match.group(1)
+    elif 'meesho' in url:
+        meesho_match = re.search(meesho_pattern, url)
+        if meesho_match:
+            return meesho_match.group(1)
     elif 'amazon' in url:
         product_code_match = re.search(r"/product/([A-Za-z0-9]{10})", url)
         product_code_match2 = re.search(r'/dp/([A-Za-z0-9]{10})', url)
@@ -151,10 +160,10 @@ async def fetch_amazon_price(product_url):
         print(f"Error fetching amazon price: {e}")
         return {"error": f"An error occurred: {str(e)}"}
 async def main():
-
-    product = await fetch_flipkart_price2(unshorten_url(input('enter : ')))
+    url=input('enter : ')
+    product = await fetch_meesho_price(unshorten_url(url))
     print(product)
+    print(findId(url))
 asyncio.run(main())
-# product = ExtractFlipkart('https://dl.flipkart.com/s/_iwucxNNNN')
-# print(product.get_price())
+
 

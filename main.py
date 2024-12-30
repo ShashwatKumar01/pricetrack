@@ -65,7 +65,7 @@ async def help(_, message: Message):
     await message.reply_text(text, quote=True)
 
 
-@app.on_message(filters.command("my_trackings") & filters.private)
+@app.on_message(filters.command("my_trackings") & filters.private & filters.incoming)
 async def track(_, message):
     try:
         chat_id = message.chat.id
@@ -73,6 +73,7 @@ async def track(_, message):
         products = await fetch_all_products(chat_id)
         if products:
             products_message = "Your Tracked Products:\n\n"
+            # print('gg')
 
             for i, product in enumerate(products, start=1):
                 _id = product.get("product_id")
@@ -171,7 +172,7 @@ async def track_url(_, message):
         url= extract_link_from_text(text).strip()
         if ('dl.flipkart' in url):
             url=unshorten_url(url)
-        if(('amazon' not in url) and ('ajio' not in url) and ('myntra' not in url) and ('flipkart'not in url)):
+        if(('amazon' not in url) and ('ajio' not in url) and ('myntra' not in url) and ('flipkart'not in url) and ('shopsy'not in url) and ('meesho'not in url)):
             url= unshorten_url(url)
         platform=await check_platform(url)
         if platform==None:
@@ -202,22 +203,6 @@ async def track_url(_, message):
     except Exception as e:
         await app.send_message(chat_id='5886397642', text=e)
 
-# schedule.every().day.at("00:00").do(lambda: asyncio.create_task(check_prices(app))).tag(
-#     "daily_job"
-# )
-# schedule.every(1).hour.do(lambda: asyncio.create_task(check_prices(app))).tag("hourly_job")
-# schedule.every(1).minute.do(lambda: asyncio.run(check_prices(app))).tag("minute_job")
-
-# def run_schedule():
-#     while True:
-#         schedule.run_pending()
-#         time.sleep(5)
-# def main():
-#     schedule_thread = threading.Thread(target=run_schedule)
-#     schedule_thread.start()
-#
-#     app.run(print("Bot Running"))
-# Run schedule in a separate thread
 
 def run_schedule(loop):
     # Set the event loop for this thread
@@ -243,8 +228,6 @@ async def main():
     await app.start()
     print("Bot started...")
 
-    # Keep the bot running
-    # await app.idle()
 
 if __name__ == "__main__":
     # Use asyncio.run to start the main async function and manage the event loop

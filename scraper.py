@@ -120,9 +120,15 @@ def findId(url):
 async def fetch_flipkart_price2(url):
     try:
         product=ExtractFlipkart(url)
+        if 'month' in product.get_price():
+            x=await fetch_flipkart_price2(url)
+            price=x.get('price')
+
+        else:
+            price=product.get_price()
         return ({
                         "name": product.get_title(),
-                        "price": product.get_price(),
+                        "price": price,
                         "product_image": product.get_images()[0]
                     })
     except Exception as e:
@@ -137,7 +143,6 @@ async def fetch_flipkart_price(url):
 
             # Find all <script> tags with type="application/ld+json"
             scripts = soup.find_all("script", type="application/ld+json")
-
             if scripts:
                 try:
                     # Extract the JSON data from the second script tag (scripts[1])
@@ -197,7 +202,8 @@ async def fetch_amazon_price(product_url):
         if SearchProduct.offers.listings[0].price.amount:
             # print(str(SearchProduct.offers))
             price_element = str(SearchProduct.offers.listings[0].price.display_amount)
-            price = price_element.strip().replace("₹", "").replace(",", "")
+            # print(price_element)
+            price = price_element.split(' ')[0].strip().replace("₹", "").replace(",", "")
 
         else:
             price = 'Currently Unavailable'

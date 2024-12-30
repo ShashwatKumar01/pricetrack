@@ -59,9 +59,9 @@ async def process_product(product, app):
                     "$push": {"price_history": {"date": current_time, "price": current_price}}
                 },
             )
-
             # Notify users about the price change
-            await notify_users(product, app)
+            updated_product = await PRODUCTS.find_one({"_id": product["_id"]})
+            await notify_users(updated_product, app)
 
 
 async def notify_users(product, app):
@@ -74,17 +74,19 @@ async def notify_users(product, app):
         platform= product["platform"]
         percentage_change = ((current_price - previous_price) / previous_price) * 100
         text = (
-            f"<b>⚠️ Alert! The price of [{product['product_name']}]({product['aff_url']}) has changed.</b>\n\n"
+            f"<b>📉📈 Alert! The price of [{product['product_name']}]({product['aff_url']}) has changed.</b>\n\n"
             f"   - Previous Price: ₹{previous_price:.2f}\n"
             f"   - Current Price: ₹{current_price:.2f}\n"
             f"   - Percentage Change: {percentage_change:.2f}%\n"
             f"   - Tracked By <b>@The_PriceTracker_Bot</b>\n\n"
             f"   - <b>[Click here to open in {platform}]({product['aff_url']})</b>\n\n"
+            f"ℹ️ Send `/product {user['_id']}` to get more INFO about the Product\n"
             f"🔴 Send `/stop {user['_id']}` to Stop the Tracking"
         )
         Join = InlineKeyboardMarkup(
-            [[InlineKeyboardButton("Buy Now", url=f"{product['aff_url']}")],
-             [InlineKeyboardButton("Today's Deals", url="https://t.me/+HeHY-qoy3vsxYWU1")]])
+            [[InlineKeyboardButton("🎟️ Buy Now", url=f"{product['aff_url']}")],
+             [InlineKeyboardButton("🛍️ Today's Deals", url="https://t.me/+HeHY-qoy3vsxYWU1")],
+             [InlineKeyboardButton("🕵️ Report ISSUES", url="https://t.me/imovies_contct_bot")]])
 
         await app.send_message(
             chat_id=user.get("user_id"), text=text,reply_markup=Join, disable_web_page_preview=False)

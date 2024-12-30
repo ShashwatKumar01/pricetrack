@@ -102,8 +102,59 @@ async def fetch_myntra_price2(url):
     except Exception as e:
         print(f"Error fetching Myntra price: {e}")
         return {"error": f"An error occurred: {str(e)}"}
+def findId(url):
+    flipkart_pattern = r"flipkart\.com(?:\/.*\/.*)?\?pid=([\w-]+)"
+    ajio_pattern = r"https:\/\/www\.ajio\.com(?:.*\/)?p\/([\w-]+)(?=\W|$)"
+    myntra_pattern = r"https:\/\/www\.myntra\.com(?:\/.*)?\/(\d+)\/?"
+
+    # flipkart_match = re.match(flipkart_pattern, url)
+    # ajio_match = re.match(ajio_pattern, url)
+    # myntra_match = re.match(myntra_pattern, url)
+    if 'flipkart' in url:
+        flipkart_match = re.search(flipkart_pattern, url)
+        if flipkart_match:
+            return flipkart_match.group(1)
+
+    elif 'ajio' in url:
+        ajio_match = re.search(ajio_pattern, url)
+        if ajio_match:
+            return ajio_match.group(1)
+    elif 'myntra' in url:
+        myntra_match = re.search(myntra_pattern, url)
+        if myntra_match:
+            return myntra_match.group(1)
+    elif 'amazon' in url:
+        product_code_match = re.search(r"/product/([A-Za-z0-9]{10})", url)
+        product_code_match2 = re.search(r'/dp/([A-Za-z0-9]{10})', url)
+        product_code = product_code_match.group(1) if product_code_match else product_code_match2.group(1)
+        return product_code
+async def fetch_amazon_price(product_url):
+    # product_url=remove_amazon_affiliate_parameters(product_url)
+    try:
+        asin = get_asin(product_url)
+        # print(asin)
+        SearchProduct = amazon.get_items(asin)[0]
+        amazon_product_name = SearchProduct.item_info.title.display_value
+        # print(amazon_product_name)
+        img_url = SearchProduct.images.primary.large.url
+        # print(img_url)
+        # print(SearchProduct)
+        if SearchProduct.offers.listings[0].price.amount:
+            # print(str(SearchProduct.offers))
+            price_element = str(SearchProduct.offers.listings[0].price.display_amount)
+            price = price_element.split(' ')[0].strip().replace("₹", "").replace(",", "")
+
+        else:
+            price = 'Currently Unavailable'
+        return {"price": price, "name": amazon_product_name, "product_image": img_url}
+    except Exception as e:
+        print(f"Error fetching amazon price: {e}")
+        return {"error": f"An error occurred: {str(e)}"}
 async def main():
 
-    x=await fetch_myntra_price2('https://www.myntra.com/headphones/realme/realme-buds-wireless-3-neo-with-134mm-driver-32-hrs-playback--dual-connection-headset/29655054/buy')
-    print(x)
+    product = await fetch_flipkart_price2(unshorten_url(input('enter : ')))
+    print(product)
 asyncio.run(main())
+# product = ExtractFlipkart('https://dl.flipkart.com/s/_iwucxNNNN')
+# print(product.get_price())
+

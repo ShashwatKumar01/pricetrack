@@ -160,7 +160,7 @@ async def status(_, message):
     )
     await status.edit(stats_message)
 
-@app.on_message(filters.private | filters.group)
+@app.on_message(filters.private)
 async def track_url(_, message):
     try:
         text = message.caption if message.caption else message.text
@@ -169,6 +169,8 @@ async def track_url(_, message):
             return None
         a = await message.reply_text("Please Wait....!!")
         url= extract_link_from_text(text).strip()
+        if ('dl.flipkart' in url):
+            url=unshorten_url(url)
         if(('amazon' not in url) and ('ajio' not in url) and ('myntra' not in url) and ('flipkart'not in url)):
             url= unshorten_url(url)
         platform=await check_platform(url)
@@ -177,14 +179,15 @@ async def track_url(_, message):
             return
         try:
             platform,pid,product_name, price,img_url,scrap_error= await scrape(url, platform)
-            print(product_name, price,scrap_error)
+            print(platform,pid,product_name, price,img_url,scrap_error)
             if product_name and price:
                 status = await message.reply_text("Adding Your Product...")
                 id = await add_new_product(
                     message.chat.id, product_name, url, price,img_url,pid,platform
                 )
                 await status.edit(
-                    f'Tracking your product "{product_name}"!\n\n'
+                    f'Tracking your product "{product_name}"!\n'
+                    f'Current Price: {price}\n\n'
                     f"You can use\n <b>`/product {id}`</b> to get more information about it."
                 )
                 await a.delete()

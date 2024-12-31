@@ -3,7 +3,7 @@ import logging
 import threading
 from pyrogram import Client
 from pyrogram import filters
-from pyrogram.types import Message
+from pyrogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 # from dotenv import load_dotenv
 import os
 import schedule
@@ -32,19 +32,24 @@ async def hello():
     return 'Hello, world!'
 app = Client("PriceTrackerBot", api_id=api_id, api_hash=api_hash, bot_token=bot_token)
 
-
+channels = InlineKeyboardMarkup(
+            [[InlineKeyboardButton("🛍️ Today's Deals", url="https://t.me/+HeHY-qoy3vsxYWU1"),
+              InlineKeyboardButton("🛍️ PriceHistory Deals", url="https://t.me/+rTx5B9g6XYxmNmE1")],
+             [InlineKeyboardButton("🕵️ Report ISSUES", url="https://t.me/imovies_contact_bot")]])
 @app.on_message(filters.command("start") & filters.private)
 async def start(_, message: Message):
     text = (
-        f"Hello {message.chat.username}! 🌟\n\n"
-        "I'm PriceTrackerBot, your personal assistant for tracking product prices. 💸\n\n"
-        "To get started, use the /my_trackings command to start tracking a product. "
-        "Simply send your product url:\n"
+        f"<b><i>Hello {message.from_user.first_name}! </i>🌟</b>\n\n"
+        "I'm PriceTrackerBot, your personal assistant for tracking product prices. I will notify you when price goes low or high 💸\n\n"
+        "<b>Only you have to send me your product Link</b>\n"
+        "<i>Supported websites: 👉 [Amazon, Flipkart, Shopsy, Ajio]</i>\n\n"
+        
+        "To get started, use the /my_trackings command to start tracking a product.\n"
         "Feel free to ask for help with the /help command at any time. Happy tracking! 🚀\n\n"
-        "<u>Also Try Our other Bots👇</u>\n@Amazon_Pricehistory_bot\n@The_Wishlist_Robot\n@imoviesmagic_bot"
+        "<b><u>Also Try Our other Bots👇</u>\n\n@Amazon_Pricehistory_bot\n@The_Wishlist_Robot\n</b>"
     )
 
-    await message.reply_text(text, quote=True)
+    await message.reply_text(text, quote=True,reply_markup=channels)
 
 
 @app.on_message(filters.command("help") & filters.private)
@@ -61,14 +66,15 @@ async def help(_, message: Message):
         "3. If there is a price change, the bot will notify you with the updated information.\n"
         "Feel free to use the commands and start tracking your favorite products!\n"
     )
-    await message.reply_text(text, quote=True)
+    await message.reply_text(text, quote=True,reply_markup=channels)
+    # await app.send_message(chat_id=message.chat.id,text=text,reply_markup=channels)
 
 
 @app.on_message(filters.command("my_trackings") & filters.private & filters.incoming)
 async def track(_, message):
     try:
         chat_id = message.chat.id
-        text = await message.reply_text("Fetching Your Products...")
+        text = await message.reply_text("Fetching Your Products...",reply_markup=channels)
         products = await fetch_all_products(chat_id)
         if products:
             products_message = "Your Tracked Products:\n\n"

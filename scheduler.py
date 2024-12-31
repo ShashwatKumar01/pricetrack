@@ -94,7 +94,7 @@ async def notify_users(product, app):
             f"   - Current Price: ₹{current_price:.2f}\n"
             f"   - Percentage Change: {percentage_change:.2f}%\n"
             f"   - Tracked By <b>@The_PriceTracker_Bot</b>\n\n"
-            f"   - Buy LINK : {product['aff_url']}"
+            f"   - Buy LINK : {product['aff_url']}\n\n"
             f"   - <b>[Click here to open in {platform}]({product['aff_url']})</b>\n\n"
             f"ℹ️ Send `/product {user['_id']}` to get more INFO about the Product\n"
             f"🔴 Send `/stop {user['_id']}` to Stop the Tracking"
@@ -102,7 +102,7 @@ async def notify_users(product, app):
         Join = InlineKeyboardMarkup(
             [[InlineKeyboardButton("🎟️ Buy Now", url=f"{product['aff_url']}")],
              [InlineKeyboardButton("🛍️ Today's Deals", url="https://t.me/+HeHY-qoy3vsxYWU1")],
-             [InlineKeyboardButton("🕵️ Report ISSUES", url="https://t.me/imovies_contct_bot")]])
+             [InlineKeyboardButton("🕵️ Report ISSUES", url="https://t.me/imovies_contact_bot")]])
 
         await app.send_message(
             chat_id=user.get("user_id"), text=text,reply_markup=Join, disable_web_page_preview=False)

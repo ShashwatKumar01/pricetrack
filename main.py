@@ -39,10 +39,9 @@ async def start(_, message: Message):
         f"Hello {message.chat.username}! 🌟\n\n"
         "I'm PriceTrackerBot, your personal assistant for tracking product prices. 💸\n\n"
         "To get started, use the /my_trackings command to start tracking a product. "
-        "Simply send the url:\n"
-        "For example:\n"
-        "I'll keep you updated on any price changes for the products you're tracking. "
-        "Feel free to ask for help with the /help command at any time. Happy tracking! 🚀"
+        "Simply send your product url:\n"
+        "Feel free to ask for help with the /help command at any time. Happy tracking! 🚀\n\n"
+        "<u>Also Try Our other Bots👇</u>\n@Amazon_Pricehistory_bot\n@The_PriceTracker_Bot\n@imoviesmagic_bot"
     )
 
     await message.reply_text(text, quote=True)
@@ -179,13 +178,15 @@ async def track_url(_, message):
             await a.edit('Unsupported platform, Only amazon,flipkart,myntra ,ajio')
             return
         try:
-            platform,pid,product_name, price,img_url,scrap_error= await scrape(url, platform)
-            print(platform,pid,product_name, price,img_url,scrap_error)
+            platform,pid,product_name, price,img_url,availability,scrap_error= await scrape(url, platform)
+            print(platform,pid,product_name, price,img_url,availability,scrap_error)
+            if availability == 'OutofStock':
+                await app.send_message(chat_id=message.chat.id,text='Looks like this product is Out Of Stock\n\nPlease Try again Later')
+                return None
             if product_name and price:
                 status = await message.reply_text("Adding Your Product...")
                 id = await add_new_product(
-                    message.chat.id, product_name, url, price,img_url,pid,platform
-                )
+                    message.chat.id, product_name,url,price,img_url,pid,platform)
                 await status.edit(
                     f'Tracking your product "{product_name}"!\n'
                     f'Current Price: {price}\n\n'

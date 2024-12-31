@@ -59,8 +59,9 @@ async def scrape(url, platform):
     price = product.get('price')
     product_name = product.get('name')
     img_url=product.get('product_image')
+    availability=product.get('availability')
     scrap_error=product.get('error')
-    return platform,pid,product_name, price,img_url,scrap_error
+    return platform,pid,product_name, price,img_url,availability,scrap_error
     # except Exception as e:
     #     print(e)
     #     return None, None
@@ -120,6 +121,8 @@ def findId(url):
 async def fetch_flipkart_price2(url):
     try:
         product=ExtractFlipkart(url)
+
+        availability='InStock' if (product.is_available()) else 'OutofStock'
         if 'month' in product.get_price():
             x=await fetch_flipkart_price2(url)
             price=x.get('price')
@@ -129,6 +132,7 @@ async def fetch_flipkart_price2(url):
         return ({
                         "name": product.get_title(),
                         "price": price,
+                        "availability": availability,
                         "product_image": product.get_images()[0]
                     })
     except Exception as e:
@@ -197,17 +201,17 @@ async def fetch_amazon_price(product_url):
         amazon_product_name = SearchProduct.item_info.title.display_value
         # print(amazon_product_name)
         img_url = SearchProduct.images.primary.large.url
-        # print(img_url)
-        # print(SearchProduct)
+
         if SearchProduct.offers.listings[0].price.amount:
-            # print(str(SearchProduct.offers))
+
             price_element = str(SearchProduct.offers.listings[0].price.display_amount)
-            # print(price_element)
             price = price_element.split(' ')[0].strip().replace("₹", "").replace(",", "")
+            availability=str(SearchProduct.offers.listings[0].availability.message)
+            availability='InStock' if 'In stock' in availability else 'OutofStock'
 
         else:
-            price = 'Currently Unavailable'
-        return {"price": price, "name": amazon_product_name, "product_image": img_url}
+            price = None
+        return {"price": price, "name": amazon_product_name, "product_image": img_url,"availability":availability,}
     except Exception as e:
         print(f"Error fetching amazon price: {e}")
         return {"error": f"An error occurred: {str(e)}"}
@@ -243,6 +247,10 @@ async def fetch_myntra_price(url):
                     price_currency = data.get("offers", {}).get("priceCurrency")
                     product_image = data.get("image")
                     product_description = data.get("description")
+                    availability=data.get("offers", {}).get('availability')
+
+                    availability='InStock' if 'InStock' in availability else 'OutofStock'
+
 
                     # Print or return the product details
                     if product_name == None:
@@ -251,6 +259,7 @@ async def fetch_myntra_price(url):
                         "name": product_name,
                         "price": f"{product_price}",
                         "product_image": product_image,
+                        "availability": availability,
                         "product_description": product_description
                     })
                     # else:
@@ -300,6 +309,9 @@ async def fetch_ajio_price(url):
                     price_currency = data.get("offers", {}).get("priceCurrency")
                     product_image = data.get("image")
                     product_description = data.get("description")
+                    availability=data.get("offers", {}).get('availability')
+                    availability='InStock' if 'InStock' in availability else 'OutofStock'
+
                     if product_name == None:
                         return {'error':'Unable to find the product'}
                         # Print or return the product details
@@ -307,6 +319,7 @@ async def fetch_ajio_price(url):
                         "name": product_name,
                         "price": f"{product_price}",
                         "product_image": product_image,
+                        "availability": availability,
                         "product_description": product_description
                     })
                     # else:
@@ -354,12 +367,15 @@ async def fetch_myntra_price2(url):
                     price_currency = data.get("offers", {}).get("priceCurrency")
                     product_image = data.get("image")
                     product_description = data.get("description")
+                    availability=data.get("offers", {}).get('availability')
+                    availability='InStock' if 'InStock' in availability else 'OutofStock'
 
                     # Print or return the product details
                     return ({
                         "name": product_name,
                         "price": f"{product_price}",
                         "product_image": product_image,
+                        "availability": availability,
                         "product_description": product_description
                     })
                     # else:
@@ -396,10 +412,13 @@ async def fetch_shopsy_price(url):
                     data = json.loads(clean_json)
                     data=data[0]
                     product_name = data.get("name")
+
                     product_price = data.get("offers", {}).get("price")
                     price_currency = data.get("offers", {}).get("priceCurrency")
                     product_image = data.get("image")
                     product_description = data.get("description")
+                    availability=data.get("offers", {}).get('availability')
+                    availability='InStock' if 'InStock' in availability else 'OutofStock'
 
                     # Print or return the product details
                     if product_name == None:
@@ -408,6 +427,7 @@ async def fetch_shopsy_price(url):
                         "name": product_name,
                         "price": f"{product_price}",
                         "product_image": product_image,
+                        "availability":availability,
                         "product_description": product_description
                     })
                     # else:
@@ -447,16 +467,14 @@ async def fetch_meesho_price(url):
                     clean_json = ''.join([char if char.isprintable() else ' ' for char in raw_json])
 
                     data = json.loads(clean_json)
-                    print(data)
-                    # data=data[0]
-                    print(data)
-                    # Ensure the data is a valid product object
-                    # if data.get("@type") == "Product":  # Filter for Product data
                     product_name = data.get("name")
                     product_price = data.get("offers", {}).get("price")
                     price_currency = data.get("offers", {}).get("priceCurrency")
                     product_image = data.get("image")[0]
                     product_description = data.get("description")
+                    availability=data.get("offers", {}).get('availability')
+
+                    availability='InStock' if 'InStock' in availability else 'OutofStock'
 
                     # Print or return the product details
                     if product_name == None:
@@ -465,6 +483,7 @@ async def fetch_meesho_price(url):
                         "name": product_name,
                         "price": f"{product_price}",
                         "product_image": product_image,
+                        "availability": availability,
                         "product_description": product_description
                     })
                     # else:

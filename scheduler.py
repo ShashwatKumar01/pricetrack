@@ -42,9 +42,24 @@ async def process_product(product, app):
         platform = await check_platform(url)
         # _, current_price = await scrape(product["url"])
         await asyncio.sleep(1)
-        _,_,_,current_price,_,_= await scrape(url, platform)
+        _,_,_,current_price,_,current_availability,_= await scrape(url, platform)
         # print(current_price)
-        if current_price is not None and current_price != product["price"]:
+        # if current_availability!=product["availability"]:
+        #     await PRODUCTS.update_one(
+        #         {"_id": product["_id"]},
+        #         {
+        #             "$set": {
+        #                 "availability": current_availability,
+        #             }})
+        #     updated_product = await PRODUCTS.find_one({"_id": product["_id"]})
+        #     cursor = collection.find({"product_id": updated_product["_id"]})
+        #     users = await cursor.to_list(length=None)
+        #     # affurl= await ekconvert(product['url'])
+        #     for user in users:
+        #         current_price = float(product["price"])
+        #         await app.send_message(
+        #             chat_id=user.get("user_id"), text=text, reply_markup=Join, disable_web_page_preview=False)
+        if current_price is not None and current_price != product["price"] and current_availability!='OutofStock':
             # Update the product information in the database
             current_time = datetime.utcnow()
             await PRODUCTS.update_one(
@@ -79,6 +94,7 @@ async def notify_users(product, app):
             f"   - Current Price: ₹{current_price:.2f}\n"
             f"   - Percentage Change: {percentage_change:.2f}%\n"
             f"   - Tracked By <b>@The_PriceTracker_Bot</b>\n\n"
+            f"   - Buy LINK : {product['aff_url']}"
             f"   - <b>[Click here to open in {platform}]({product['aff_url']})</b>\n\n"
             f"ℹ️ Send `/product {user['_id']}` to get more INFO about the Product\n"
             f"🔴 Send `/stop {user['_id']}` to Stop the Tracking"

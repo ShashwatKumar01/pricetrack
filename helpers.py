@@ -194,5 +194,8 @@ async def ekconvert(text):
     # Extract the "data" part from the dictionary
     data_value = response_dict.get('data')
 
-    return(data_value)
+    if 'could not locate' in data_value:
+        return text
+    else:
+        return(data_value)
 

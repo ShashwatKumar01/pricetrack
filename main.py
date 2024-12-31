@@ -41,7 +41,7 @@ async def start(_, message: Message):
         "To get started, use the /my_trackings command to start tracking a product. "
         "Simply send your product url:\n"
         "Feel free to ask for help with the /help command at any time. Happy tracking! 🚀\n\n"
-        "<u>Also Try Our other Bots👇</u>\n@Amazon_Pricehistory_bot\n@The_PriceTracker_Bot\n@imoviesmagic_bot"
+        "<u>Also Try Our other Bots👇</u>\n@Amazon_Pricehistory_bot\n@The_Wishlist_Robot\n@imoviesmagic_bot"
     )
 
     await message.reply_text(text, quote=True)

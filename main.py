@@ -176,7 +176,7 @@ async def track_url(_, message):
         a = await message.reply_text("Please Wait....!!")
         url= extract_link_from_text(text)
         if not url:
-            await a.delete
+            await a.delete()
             await message.reply_text('Link not found.Give me a product link, I will alert you when price of that product Changes')
             return None
         if ('dl.flipkart' in url):

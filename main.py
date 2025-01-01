@@ -174,20 +174,29 @@ async def track_url(_, message):
             await message.delete()
             return None
         a = await message.reply_text("Please Wait....!!")
-        url= extract_link_from_text(text).strip()
+        url= extract_link_from_text(text)
+        if not url:
+            await a.delete
+            await message.reply_text('Link not found.Give me a product link, I will alert you when price of that product Changes')
+            return None
         if ('dl.flipkart' in url):
             url=unshorten_url(url)
         if(('amazon' not in url) and ('ajio' not in url) and ('myntra' not in url) and ('flipkart'not in url) and ('shopsy'not in url) and ('meesho'not in url)):
             url= unshorten_url(url)
+
         platform=await check_platform(url)
         if platform==None:
             await a.edit('Unsupported platform, Only amazon,flipkart,myntra ,ajio')
             return
+
         try:
             platform,pid,product_name, price,img_url,availability,scrap_error= await scrape(url, platform)
             print(platform,pid,product_name, price,img_url,availability,scrap_error)
+            if pid == None:
+                await app.send_message(chat_id=message.chat.id,text='Product ID not found',reply_markup=channels)
+                return
             if availability == 'OutofStock':
-                await app.send_message(chat_id=message.chat.id,text='Looks like this product is Out Of Stock\n\nPlease Try again Later')
+                await app.send_message(chat_id=message.chat.id,text='Looks like this product is Out Of Stock\n\nPlease Try again Later',reply_markup=channels)
                 return None
             if product_name and price:
                 status = await message.reply_text("Adding Your Product...")
@@ -201,12 +210,13 @@ async def track_url(_, message):
                 await a.delete()
             if scrap_error:
                 await app.send_message(chat_id='5886397642', text=f'New Error from a user\n\n{scrap_error},\n\n{url}',disable_web_page_preview=True)
-                await app.send_message(chat_id=message.chat.id,text="Failed to scrape your product !!!")
+                await app.send_message(chat_id=message.chat.id,text="Failed to scrape your product !!!Reprt it to Admin",reply_markup=channels)
                 await a.delete()
 
 
         except Exception as e:
             await app.send_message(chat_id='5886397642',text=e)
+
     except Exception as e:
         await app.send_message(chat_id='5886397642', text=e)
 

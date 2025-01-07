@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 load_dotenv()
-
+from threading import BoundedSemaphore
 from datetime import datetime
 import asyncio
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -21,13 +21,17 @@ PRODUCTS = database[os.getenv("PRODUCTS")]  # Products collection
 
 
 async def check_prices(app):
-    job=await app.send_message(chat_id='5886397642', text=f'CronJob started')
+    job=await app.send_message(chat_id='5886397642', text=f'Price checking Started.')
 
     start_time=time.time()
     # Process products concurrently
     tasks = []
+    print("Price checking Started.")
+
     async for product in PRODUCTS.find():
         tasks.append(process_product(product, app))
+        # print('hi')
+
 
     await asyncio.gather(*tasks)  # Run all tasks concurrently
     print("Price checking completed.")
@@ -41,24 +45,8 @@ async def process_product(product, app):
         url = product["url"]
         platform = await check_platform(url)
         # _, current_price = await scrape(product["url"])
-        await asyncio.sleep(1)
+        # await asyncio.sleep(1)
         _,_,_,current_price,_,current_availability,_= await scrape(url, platform)
-        # print(current_price)
-        # if current_availability!=product["availability"]:
-        #     await PRODUCTS.update_one(
-        #         {"_id": product["_id"]},
-        #         {
-        #             "$set": {
-        #                 "availability": current_availability,
-        #             }})
-        #     updated_product = await PRODUCTS.find_one({"_id": product["_id"]})
-        #     cursor = collection.find({"product_id": updated_product["_id"]})
-        #     users = await cursor.to_list(length=None)
-        #     # affurl= await ekconvert(product['url'])
-        #     for user in users:
-        #         current_price = float(product["price"])
-        #         await app.send_message(
-        #             chat_id=user.get("user_id"), text=text, reply_markup=Join, disable_web_page_preview=False)
         if current_price is not None and current_price != product["price"] and current_availability!='OutofStock':
             # Update the product information in the database
             current_time = datetime.utcnow()

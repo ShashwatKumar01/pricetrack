@@ -231,10 +231,7 @@ def run_schedule(loop):
     # Main async function
 
 async def main():
-    # Start the schedule runner in a separate thread
 
-
-    # Bind the application to a specific port
     schedule_thread = threading.Thread(target=run_schedule,args=(loop,))
     schedule_thread.daemon = True  # Ensure the thread stops when the program exits
     schedule_thread.start()

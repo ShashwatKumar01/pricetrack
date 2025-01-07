@@ -201,20 +201,21 @@ async def fetch_amazon_price(product_url):
         amazon_product_name = SearchProduct.item_info.title.display_value
         # print(amazon_product_name)
         img_url = SearchProduct.images.primary.large.url
+        # print(img_url)
+        try:
+            if SearchProduct.offers.listings[0].price.amount:
+                price_element = str(SearchProduct.offers.listings[0].price.display_amount)
+                price = price_element.split(' ')[0].strip().replace("₹", "").replace(",", "")
+                # print(SearchProduct.offers)
+                availability=str(SearchProduct.offers.listings[0].availability.message)
+                availability='InStock' if 'In stock' in availability else 'OutofStock'
 
-        if SearchProduct.offers.listings[0].price.amount:
-
-            price_element = str(SearchProduct.offers.listings[0].price.display_amount)
-            price = price_element.split(' ')[0].strip().replace("₹", "").replace(",", "")
-            availability=str(SearchProduct.offers.listings[0].availability.message)
-            availability='InStock' if 'In stock' in availability else 'OutofStock'
-
-        else:
+        except Exception as err:
             price = None
-        return {"price": price, "name": amazon_product_name, "product_image": img_url,"availability":availability,}
+            availability='OutofStock'
+        return {"price": price, "name": amazon_product_name, "product_image": img_url,"availability":availability}
     except Exception as e:
-        print(f"Error fetching amazon price: {e}")
-        return {"error": f"An error occurred: {str(e)}"}
+        return {"error": f"An error occurred: {str(e)} url: {product_url}"}
 
 
 

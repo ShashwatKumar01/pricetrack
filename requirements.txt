@@ -19,6 +19,5 @@ motor
 python_amazon_paapi
 unshortenit
 requests==2.31.0
-python_flipkart_scraper
 Quart
 

@@ -7,7 +7,7 @@ import json
 
 from amazon_paapi import AmazonApi, get_asin
 from bs4 import BeautifulSoup
-from python_flipkart_scraper import ExtractFlipkart
+# from python_flipkart_scraper import ExtractFlipkart
 # from python_amazon_scraper import ExtractAmazon
 
 from dotenv import load_dotenv
@@ -38,7 +38,7 @@ async def scrape(url, platform):
     if pid==None:
         return None,None,None,None,None,'Product ID not Found'
     if platform == "flipkart":
-        product = await fetch_flipkart_price2(url)
+        product = await fetch_flipkart_price(url)
     # elif platform == "amazon":
     #     product = ExtractAmazon(url)
     elif platform=='amazon':
@@ -118,25 +118,25 @@ def findId(url):
         product_code = product_code_match.group(1) if product_code_match else product_code_match2.group(1)
         return product_code
 
-async def fetch_flipkart_price2(url):
-    try:
-        product=ExtractFlipkart(url)
-
-        availability='InStock' if (product.is_available()) else 'OutofStock'
-        if 'month' in product.get_price():
-            x=await fetch_flipkart_price2(url)
-            price=x.get('price')
-
-        else:
-            price=product.get_price()
-        return ({
-                        "name": product.get_title(),
-                        "price": price,
-                        "availability": availability,
-                        "product_image": product.get_images()[0]
-                    })
-    except Exception as e:
-        return {"error": f"An error occurred: {str(e)}"}
+# async def fetch_flipkart_price2(url):
+#     try:
+#         product=ExtractFlipkart(url)
+#
+#         availability='InStock' if (product.is_available()) else 'OutofStock'
+#         if 'month' in product.get_price():
+#             x=await fetch_flipkart_price2(url)
+#             price=x.get('price')
+#
+#         else:
+#             price=product.get_price()
+#         return ({
+#                         "name": product.get_title(),
+#                         "price": price,
+#                         "availability": availability,
+#                         "product_image": product.get_images()[0]
+#                     })
+#     except Exception as e:
+#         return {"error": f"An error occurred: {str(e)}"}
 
 async def fetch_flipkart_price(url):
     try:
@@ -158,9 +158,8 @@ async def fetch_flipkart_price(url):
                     # Now try to load the cleaned JSON
                     data = json.loads(clean_json)
                     if type(data)==list:
-                        print('gg')
                         data=data[0]
-                    print(data)
+                    # print(data)
                     # Ensure the data is a valid product object
                     # if data.get("@type") == "Product":  # Filter for Product data
                     product_name = data.get("name")

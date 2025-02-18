@@ -21,7 +21,7 @@ PRODUCTS = database[os.getenv("PRODUCTS")]  # Products collection
 
 
 async def check_prices(app):
-    job=await app.send_message(chat_id='5886397642', text=f'Price checking Started.')
+    job=await app.send_message(chat_id='5886397642', text=f'Price checking Started.  ')
 
     start_time=time.time()
     # Process products concurrently

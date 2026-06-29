@@ -11,6 +11,7 @@ load_dotenv()
 PAAPI_KEY = os.getenv("PAAPI_KEY")
 PAAPI_SECRET = os.getenv("PAAPI_SECRET")
 PAAPI_TAG = os.getenv("PAAPI_TAG")
+BUYHATKE_PROXY = os.getenv("BUYHATKE_PROXY")  # e.g. http://user:pass@host:port
 
 _BUYHATKE_HEADERS = {
     "User-Agent": (
@@ -139,6 +140,7 @@ async def fetch_buyhatke_price(url: str) -> dict:
         async with aiohttp.ClientSession(headers=_BUYHATKE_HEADERS) as session:
             async with session.get(
                 page_url,
+                proxy=BUYHATKE_PROXY,
                 timeout=aiohttp.ClientTimeout(total=20),
                 allow_redirects=True,
             ) as resp:

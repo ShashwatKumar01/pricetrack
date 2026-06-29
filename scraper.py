@@ -46,7 +46,7 @@ async def scrape(url, platform):
     if pid is None:
         return None, None, None, None, None, None, 'Product ID not Found'
 
-    if platform == 'amazon':
+    if platform == 'amazon' and PAAPI_KEY and PAAPI_SECRET and PAAPI_TAG:
         product = await fetch_amazon_paapi(pid)
     else:
         product = await fetch_buyhatke_price(url)

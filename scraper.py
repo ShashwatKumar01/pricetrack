@@ -195,10 +195,10 @@ async def fetch_direct(url: str, platform: str) -> dict:
     pid = findId(url)
 
     if platform == 'myntra':
-        return await fetch_myntra_direct(pid)
+        return await fetch_myntra_direct(url, pid)
 
     if platform == 'ajio':
-        return await fetch_ajio_direct(pid)
+        return await fetch_ajio_direct(url)
 
     # Flipkart, Shopsy, Meesho — parse HTML with JSON-LD
     try:
@@ -222,9 +222,9 @@ async def fetch_direct(url: str, platform: str) -> dict:
     return _parse_platform_fallback(html, platform)
 
 
-async def fetch_myntra_direct(pid: str) -> dict:
-    """Uses Myntra's internal gateway API — returns JSON, no JS needed."""
-    url = f"https://www.myntra.com/gateway/v2/product/{pid}"
+async def fetch_myntra_direct(url: str, pid: str) -> dict:
+    """Tries Myntra gateway API, falls back to HTML page parsing."""
+    api_url = f"https://www.myntra.com/gateway/v2/product/{pid}"
     headers = {
         **_DIRECT_HEADERS,
         "Accept": "application/json, text/plain, */*",
@@ -233,15 +233,22 @@ async def fetch_myntra_direct(pid: str) -> dict:
     }
     try:
         async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=20), allow_redirects=True) as resp:
-                if resp.status != 200:
-                    return {"error": f"Myntra API HTTP {resp.status}"}
-                data = await resp.json(content_type=None)
-    except asyncio.TimeoutError:
-        return {"error": "Myntra API timed out"}
-    except Exception as e:
-        return {"error": f"Myntra API error: {e}"}
+            async with session.get(api_url, timeout=aiohttp.ClientTimeout(total=20)) as resp:
+                if resp.status == 200:
+                    body = await resp.text()
+                    if body.strip():
+                        data = json.loads(body)
+                        result = _parse_myntra_api(data)
+                        if result.get('price'):
+                            return result
+    except Exception:
+        pass
 
+    # Gateway blocked or empty — fetch product page HTML
+    return await _fetch_page_and_parse(url, 'myntra')
+
+
+def _parse_myntra_api(data: dict) -> dict:
     style = data.get("style", {})
     price_data = style.get("price", {})
     price = price_data.get("discounted") or price_data.get("mrp")
@@ -252,7 +259,7 @@ async def fetch_myntra_direct(pid: str) -> dict:
     sizes = style.get("sizes", [])
     in_stock = any(s.get("sizeType", "").upper() != "OUTOFSTOCK" for s in sizes) if sizes else True
     if not price:
-        return {"error": "Myntra: price not found in response"}
+        return {"error": "Myntra: price not found"}
     return {
         "name": name,
         "price": str(int(price)),
@@ -261,47 +268,87 @@ async def fetch_myntra_direct(pid: str) -> dict:
     }
 
 
-async def fetch_ajio_direct(pid: str) -> dict:
-    """Uses Ajio's catalog JSON API."""
-    url = f"https://www.ajio.com/api/p/{pid}?fields=DEFAULT&reqType=product&profileType=&fmt=json"
-    headers = {
-        **_DIRECT_HEADERS,
-        "Accept": "application/json, text/plain, */*",
-        "Referer": "https://www.ajio.com/",
-        "Origin": "https://www.ajio.com",
-        "X-Requested-With": "XMLHttpRequest",
-    }
+async def fetch_ajio_direct(url: str) -> dict:
+    """Ajio API blocked by Akamai — scrape HTML and parse GTM dataLayer / JSON-LD / OG."""
+    return await _fetch_page_and_parse(url, 'ajio')
+
+
+async def _fetch_page_and_parse(url: str, platform: str) -> dict:
+    """Fetches a product page and tries multiple extraction strategies."""
+    headers = {**_DIRECT_HEADERS, "Referer": "https://www.google.com/"}
     try:
         async with aiohttp.ClientSession(headers=headers) as session:
-            async with session.get(url, timeout=aiohttp.ClientTimeout(total=20), allow_redirects=True) as resp:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=25), allow_redirects=True) as resp:
                 if resp.status != 200:
-                    return {"error": f"Ajio API HTTP {resp.status}"}
-                data = await resp.json(content_type=None)
+                    return {"error": f"{platform} page HTTP {resp.status}"}
+                html = await resp.text(encoding="utf-8", errors="replace")
     except asyncio.TimeoutError:
-        return {"error": "Ajio API timed out"}
+        return {"error": f"{platform} page timed out"}
     except Exception as e:
-        return {"error": f"Ajio API error: {e}"}
+        return {"error": f"{platform} page fetch error: {e}"}
 
-    name = data.get("name")
-    price_data = data.get("price", {})
-    price = price_data.get("value") or price_data.get("formattedValue", "")
-    if isinstance(price, str):
-        price = re.sub(r'[^\d.]', '', price)
-    images = data.get("images", [])
+    # 1. JSON-LD
+    result = _parse_jsonld(html)
+    if result and result.get('price'):
+        return result
+
+    # 2. GTM dataLayer (both Myntra and Ajio push product data here)
+    result = _parse_datalayer(html)
+    if result and result.get('price'):
+        return result
+
+    # 3. OG meta tags (name + image only; price rarely present)
+    return _parse_og_meta(html, platform)
+
+
+def _parse_datalayer(html: str) -> dict:
+    """Extracts product info from window.dataLayer GTM push."""
+    m = re.search(r'window\.dataLayer\s*=\s*(\[.*?\])\s*;', html, re.DOTALL)
+    if not m:
+        m = re.search(r'dataLayer\.push\s*\((\{.*?\})\)', html, re.DOTALL)
+        if m:
+            raw = '[' + m.group(1) + ']'
+        else:
+            return {}
+    else:
+        raw = m.group(1)
+    try:
+        layers = json.loads(raw)
+        for layer in layers if isinstance(layers, list) else [layers]:
+            if not isinstance(layer, dict):
+                continue
+            name = layer.get('productName') or layer.get('name') or layer.get('product_name')
+            price = layer.get('productPrice') or layer.get('price') or layer.get('product_price')
+            image = layer.get('productImage') or layer.get('image')
+            if name and price:
+                p = re.sub(r'[^\d.]', '', str(price))
+                return {
+                    'name': name,
+                    'price': str(int(float(p))) if p else None,
+                    'product_image': image,
+                    'availability': 'InStock',
+                }
+    except Exception:
+        pass
+    return {}
+
+
+def _parse_og_meta(html: str, platform: str) -> dict:
+    soup = BeautifulSoup(html, 'html.parser')
+    name = None
     image = None
-    if images:
-        img_url = images[0].get("url", "")
-        image = ("https:" + img_url) if img_url.startswith("//") else img_url
-    stock = data.get("stock", {}).get("stockLevelStatus", "inStock")
-    availability = "OutofStock" if "out" in stock.lower() else "InStock"
-    if not price:
-        return {"error": "Ajio: price not found in response"}
-    return {
-        "name": name,
-        "price": str(int(float(price))),
-        "product_image": image,
-        "availability": availability,
-    }
+    meta = lambda prop: (soup.find('meta', property=prop) or {}).get('content')  # noqa: E731
+    name = meta('og:title')
+    image = meta('og:image')
+    price_val = meta('product:price:amount') or meta('og:price:amount')
+    if price_val:
+        return {
+            'name': name,
+            'price': str(int(float(price_val))),
+            'product_image': image,
+            'availability': 'InStock',
+        }
+    return {"error": f"{platform}: could not extract price from page"}
 
 
 def _parse_jsonld(html: str) -> dict | None:

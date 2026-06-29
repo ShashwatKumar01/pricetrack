@@ -191,7 +191,16 @@ def _parse_svelte_data(html: str) -> dict:
 
 
 async def fetch_direct(url: str, platform: str) -> dict:
-    """Scrapes the platform page directly when BuyHatke is unavailable."""
+    """Dispatches to platform-specific direct scraper."""
+    pid = findId(url)
+
+    if platform == 'myntra':
+        return await fetch_myntra_direct(pid)
+
+    if platform == 'ajio':
+        return await fetch_ajio_direct(pid)
+
+    # Flipkart, Shopsy, Meesho — parse HTML with JSON-LD
     try:
         async with aiohttp.ClientSession(headers=_DIRECT_HEADERS) as session:
             async with session.get(
@@ -211,6 +220,88 @@ async def fetch_direct(url: str, platform: str) -> dict:
     if result:
         return result
     return _parse_platform_fallback(html, platform)
+
+
+async def fetch_myntra_direct(pid: str) -> dict:
+    """Uses Myntra's internal gateway API — returns JSON, no JS needed."""
+    url = f"https://www.myntra.com/gateway/v2/product/{pid}"
+    headers = {
+        **_DIRECT_HEADERS,
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://www.myntra.com/",
+        "Origin": "https://www.myntra.com",
+    }
+    try:
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=20), allow_redirects=True) as resp:
+                if resp.status != 200:
+                    return {"error": f"Myntra API HTTP {resp.status}"}
+                data = await resp.json(content_type=None)
+    except asyncio.TimeoutError:
+        return {"error": "Myntra API timed out"}
+    except Exception as e:
+        return {"error": f"Myntra API error: {e}"}
+
+    style = data.get("style", {})
+    price_data = style.get("price", {})
+    price = price_data.get("discounted") or price_data.get("mrp")
+    name = style.get("name")
+    albums = style.get("media", {}).get("albums", [])
+    images = albums[0].get("images", []) if albums else []
+    image = images[0].get("src") if images else None
+    sizes = style.get("sizes", [])
+    in_stock = any(s.get("sizeType", "").upper() != "OUTOFSTOCK" for s in sizes) if sizes else True
+    if not price:
+        return {"error": "Myntra: price not found in response"}
+    return {
+        "name": name,
+        "price": str(int(price)),
+        "product_image": image,
+        "availability": "InStock" if in_stock else "OutofStock",
+    }
+
+
+async def fetch_ajio_direct(pid: str) -> dict:
+    """Uses Ajio's catalog JSON API."""
+    url = f"https://www.ajio.com/api/p/{pid}?fields=DEFAULT&reqType=product&profileType=&fmt=json"
+    headers = {
+        **_DIRECT_HEADERS,
+        "Accept": "application/json, text/plain, */*",
+        "Referer": "https://www.ajio.com/",
+        "Origin": "https://www.ajio.com",
+        "X-Requested-With": "XMLHttpRequest",
+    }
+    try:
+        async with aiohttp.ClientSession(headers=headers) as session:
+            async with session.get(url, timeout=aiohttp.ClientTimeout(total=20), allow_redirects=True) as resp:
+                if resp.status != 200:
+                    return {"error": f"Ajio API HTTP {resp.status}"}
+                data = await resp.json(content_type=None)
+    except asyncio.TimeoutError:
+        return {"error": "Ajio API timed out"}
+    except Exception as e:
+        return {"error": f"Ajio API error: {e}"}
+
+    name = data.get("name")
+    price_data = data.get("price", {})
+    price = price_data.get("value") or price_data.get("formattedValue", "")
+    if isinstance(price, str):
+        price = re.sub(r'[^\d.]', '', price)
+    images = data.get("images", [])
+    image = None
+    if images:
+        img_url = images[0].get("url", "")
+        image = ("https:" + img_url) if img_url.startswith("//") else img_url
+    stock = data.get("stock", {}).get("stockLevelStatus", "inStock")
+    availability = "OutofStock" if "out" in stock.lower() else "InStock"
+    if not price:
+        return {"error": "Ajio: price not found in response"}
+    return {
+        "name": name,
+        "price": str(int(float(price))),
+        "product_image": image,
+        "availability": availability,
+    }
 
 
 def _parse_jsonld(html: str) -> dict | None:
